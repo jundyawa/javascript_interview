@@ -1,0 +1,279 @@
+ <html>
+	<head>
+		<script type="text/javascript">
+			
+			// General Variables
+			var context;
+			var drawTrigger;
+
+			// Tank Attributes
+			var tankState;
+			var tankX;
+			var tankY;
+
+			// Landmines Attributes
+			var minesX = [];
+			var minesY = [];
+
+			// Save Me attributes
+			var saveMeX;
+			var saveMeY;
+
+			// Bullet attributes
+			var nbrOfRemainingBullets;
+			var tankStateAtLaunch;
+			var bulletX;
+			var bulletY;			
+
+			// Constants
+			const nbrOfLandmines = 40;
+			const nbrOfBullets = 10;
+			const canvaWidth = 480;
+			const canvaHeight = 480;
+			const bottomMargin = 120;
+			const sideMargin = 100;
+			const deltaXY = 5;
+			
+			// The function called on body reload
+			function init(){
+
+				// We fetch the context from the canva
+				context = canvas.getContext('2d');
+				
+				// We clear our variables
+				resetVariables();
+
+				// We call the draw() function every 10 ms
+				drawTrigger = setInterval("draw()",10);
+			}
+
+			function resetVariables(){
+
+				// We set the tank initial attributes
+				tankState = tankup;
+				tankX = canvaWidth/2 - tankState.width/2;
+				tankY = canvaHeight - tankState.height - 10;
+				
+				// We clear the landmine array
+				minesX = [];
+				minesY = [];
+
+				// We clear the save me array
+				savemesX = [];
+				savemesY = [];
+
+				// We clear the bullet
+				bulletX = null;
+				bulletY = null;
+
+				// We reset the remaining bullet count
+				nbrOfRemainingBullets = nbrOfBullets;
+
+				// We populate our landmine array randomly
+				for(var i = 0 ; i < nbrOfLandmines ; i++){
+					minesX.push(Math.random()*canvaWidth);
+					minesY.push(Math.random()*(canvaHeight - bottomMargin));
+				}
+
+				// We populate our Save Me array randomly
+				saveMeX = Math.random()*(canvaWidth - sideMargin) + sideMargin/2;
+				saveMeY = Math.random()*(canvaHeight - 2*bottomMargin);
+			}
+			
+			// A function drawing our canvas every 10ms
+			function draw(){
+				
+				// We clear our canvas
+				context.clearRect(0,0,canvas.width,canvas.height);
+				
+				// We draw the background
+				context.drawImage(bg,0,0);
+
+				// We draw the tank
+				context.drawImage(tankState,tankX,tankY);
+				
+				// We draw the landmine
+				for (var i = 0 ; i < minesX.length ; i++){
+					context.drawImage(mine,minesX[i],minesY[i]);					
+				}
+
+				// We draw the bullet
+				if(bulletX != null){
+					drawBullet();
+				}
+
+				// We draw the Save Me
+				context.drawImage(saveme,saveMeX,saveMeY);
+				
+				// The remaining bullet title
+				context.font = "16pt Calibri";
+				context.lineWidth = 2;
+				context.strokeStyle = "darkblue";
+				context.strokeText("Bullets : " + nbrOfRemainingBullets, 10, canvaHeight - 10);
+				
+				// We check for collisions
+				checkForTankLandmineCollision();
+				checkForTankSaveMeCollision();
+			}
+
+			function drawBullet(){
+
+				// We draw the bullet
+				context.drawImage(bullet,bulletX,bulletY);
+				
+				// We add the delta position
+				if(tankStateAtLaunch == tankup){
+					bulletY -= deltaXY;
+
+				}else if(tankStateAtLaunch == tankdown){
+					bulletY += deltaXY;
+
+				}else if(tankStateAtLaunch == tankleft){
+					bulletX -= deltaXY;
+
+				}else if(tankStateAtLaunch == tankright){
+					bulletX += deltaXY;
+				}
+
+				// If it goes off screen
+				if(bulletX + bullet.width >= canvaWidth || bulletX <= 0 || 
+				bulletY + bullet.height >= canvaHeight || bulletY <= 0){
+					bulletX = null;
+					bulletY = null;
+				}
+				
+				// Check for collisions
+				checkForBulletLandmineCollision();
+			}
+
+			function checkForBulletLandmineCollision(){
+				for(var i = 0 ; i < minesX.length ; i++){
+					if (bulletX + bullet.width >= minesX[i] && bulletX <= minesX[i] + mine.width &&
+					 bulletY <= minesY[i] + mine.height && bulletY + bullet.height >= minesY[i]){
+						minesX.splice(i,1);
+						minesY.splice(i,1);
+						bulletX = null;
+						bulletY = null;
+						break;
+					}
+				}
+			}
+
+			function checkForTankLandmineCollision(){
+				
+				for(var i = 0 ; i < minesX.length ; i++){
+					if (tankX + tankState.width >= minesX[i] && tankX <= minesX[i] + mine.width &&
+					 tankY <= minesY[i] + mine.height && tankY + tankState.height >= minesY[i]){
+						menuDead();
+					}
+				}
+			}
+
+			function checkForTankSaveMeCollision(){
+				
+				if (tankX + tankState.width >= saveMeX && tankX <= saveMeX + saveme.width &&
+					 tankY <= saveMeY + saveme.height && tankY + tankState.height >= saveMeY){
+						menuWin();
+				}
+			}
+			
+		
+			// ----------------------------------------------------------------
+			// ----------- These Functions Show Different Texts ---------------
+			// ----------------------------------------------------------------			
+			function menuDead(){
+
+				// We stop the timer
+				clearInterval(drawTrigger);
+				
+				// We clear the canvas
+				context.clearRect(0,0,canvas.width,canvas.height);
+				
+				// Title
+				context.font = "35pt Calibri";
+				context.lineWidth = 5;
+				context.strokeStyle = "red";
+				context.strokeText("You are dead!",60,250);
+
+				// We restart
+				setTimeout("init()",1000);
+			}
+			
+			function menuWin(){
+				
+				// We stop the timer
+				clearInterval(drawTrigger);
+			
+				// We clear the canvas
+				context.clearRect(0,0,canvas.width,canvas.height);
+				
+				// Title
+				context.font = "45pt Calibri";
+				context.lineWidth = 5;
+				context.strokeStyle = "green";
+				context.strokeText("You won!",60,250);
+
+				// We restart
+				setTimeout("init()",1000);
+			}
+
+			// ----------------------------------------------------------------
+			// ----------- These Functions Handle Keyboard Events -------------
+			// ----------------------------------------------------------------			
+			window.addEventListener('keydown',moveShip);
+			
+			function moveShip(evt){
+
+				if(evt.keyCode == 37){
+					// Arrow Left
+					tankState = tankleft;
+					tankX -= deltaXY;
+
+				}else if(evt.keyCode == 39){
+					// Arrow Right
+					tankState = tankright;
+					tankX += deltaXY;
+
+				}else if(evt.keyCode == 38){
+					// Arrow Up
+					tankState = tankup;	
+					tankY -= deltaXY;				
+
+				}else if(evt.keyCode == 40){
+					// Arrow Down
+					tankState = tankdown;		
+					tankY += deltaXY;		
+
+				}else if(evt.keyCode == 32){
+					// Space
+					if(bulletX == null && nbrOfRemainingBullets > 0){
+						nbrOfRemainingBullets -= 1;
+						tankStateAtLaunch = tankState;
+						bulletX = tankX + tankState.width/2 - bullet.width/2;
+						bulletY = tankY + tankState.height/2 - bullet.height/2;
+					}
+				}
+			}
+			
+		</script>
+	
+	</head>	
+	
+	<body onload="init()">	<!-- We call init() on body load -->
+
+		<!-- We center the canvas -->
+		<center>
+			<canvas id="canvas" width="480" height="480" ></canvas>
+		</center>
+
+		<!-- We import our file resources -->
+		<img src="background.jpg"  hidden="true" id="bg">
+		<img src="tankup.png"  hidden="true" id="tankup">
+		<img src="tankdown.png"  hidden="true" id="tankdown">
+		<img src="tankleft.png"  hidden="true" id="tankleft">
+		<img src="tankright.png"  hidden="true" id="tankright">
+		<img src="bullet.png"  hidden="true" id="bullet">
+		<img src="landmine.png"  hidden="true" id="mine">
+		<img src="saveme.png"  hidden="true" id="saveme">
+	</body>
+</html>
